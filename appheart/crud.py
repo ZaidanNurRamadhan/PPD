@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from . import models, schemas
 from datetime import datetime
 
@@ -32,6 +32,14 @@ def get_patients(db: Session, skip: int = 0, limit: int = 100, name: str = None)
     if name:
         query = query.filter(models.Patient.full_name.contains(name))
     return query.offset(skip).limit(limit).all()
+
+def search_patients(db: Session, q: str):
+    return db.query(models.Patient).filter(
+        or_(
+            models.Patient.full_name.contains(q),
+            models.Patient.medical_record_number.contains(q)
+        )
+    ).limit(20).all()
 
 def create_patient(db: Session, patient: schemas.PatientCreate):
     db_patient = models.Patient(**patient.dict())

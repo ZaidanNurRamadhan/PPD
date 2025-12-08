@@ -381,18 +381,34 @@ with st.sidebar:
     )
     
     if menu == "Pasien":
-        st.markdown("#### Cari Pasien")
-        search = st.text_input("Nama / MRN", placeholder="Ketik nama...", label_visibility="collapsed")
+        st.markdown("#### Cari Pasien (Nama/RM)")
+        search = st.text_input("Nama / MRN", placeholder="Ketik Nama / No RM...", label_visibility="collapsed")
         
         db = SessionLocal()
         if search:
             with st.spinner("Mencari..."):
-                patients = crud.get_patients(db, name=search)
+                # Use new search function (Supports Name OR MRN)
+                patients = crud.search_patients(db, q=search)
+                
             if patients:
+                st.caption(f"Ditemukan {len(patients)} pasien:")
                 for p_obj in patients:
-                    # Convert to dict for easier session handling
                     p = p_obj.__dict__
-                    if st.button(f"{p['full_name']}", key=p['id'], use_container_width=True):
+                    
+                    # Fetch latest risk status for visualization
+                    last_checkups = crud.get_checkups_by_patient(db, p['id'], limit=1)
+                    risk_icon = "⚪"
+                    if last_checkups:
+                        cat = last_checkups[0].risk_category
+                        if cat == "Tinggi": risk_icon = "🔴"
+                        elif cat == "Sedang": risk_icon = "🟡"
+                        else: risk_icon = "🟢"
+                    
+                    # Format: [Icon] Name (MRN)
+                    mrn_display = p.get('medical_record_number') or "?"
+                    label = f"{risk_icon} {p['full_name']} ({mrn_display})"
+                    
+                    if st.button(label, key=p['id'], use_container_width=True):
                         st.session_state.selected_patient = p
                         st.rerun()
             else:
