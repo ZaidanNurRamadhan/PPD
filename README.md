@@ -1,115 +1,88 @@
-# SIAGA Jantung – Contoh Struktur Proyek
+# SIAGA Jantung Pro (Cloud Monolith Edition)
 
-Proyek ini adalah contoh implementasi sederhana untuk sistem analisa risiko penyakit jantung
-dengan:
+Aplikasi Analisis Risiko Penyakit Jantung berbasis *Machine Learning* yang terintegrasi penuh untuk *Telemedicine* dan *Clinical Decision Support System*.
 
-- **Backend klinis**: Streamlit (`streamlit_app/app.py`)
-- **Model ML**: XGBoost yang dibungkus dalam pipeline (`ml/cardio_model.py`)
-- **Layer aplikasi**: `appheart` (sebagai placeholder untuk modul auth / API)
+## 1. Tech Stack & Environment
+Dokumentasi teknis untuk pengembangan dan pemeliharaan fase selanjutnya.
 
-> Catatan: File ini adalah *template*. Anda perlu menambahkan file model
-> `best_xgb_pipeline.joblib` hasil training dari `cardio.py` ke folder `ml/`.
+### Core Environment
+- **Bahasa**: Python 3.10+ (Recommended: 3.11/3.12)
+- **Framework UI**: Streamlit (Cloud Compatible)
+- **Database**: SQLite (Local/Dev) -> Bisa diganti PostgreSQL untuk Production.
 
-## 1. Tech Stack
-
-### Bahasa & Runtime
-- Python 3.10+
-
-### Machine Learning
-- `pandas`
-- `numpy`
-- `scikit-learn`
-- `xgboost`
-- `imbalanced-learn`
-- `joblib`
-
-### Backend Klinis & UI
-- `streamlit` – antarmuka input dan output untuk tenaga kesehatan.
-
-### (Opsional) API Aplikasi
-- `fastapi`
-- `uvicorn`
+### Libraries Utama (`requirements.txt`)
+Berikut adalah stack teknologi yang digunakan saat ini:
+1.  **Data Processing**:
+    - `pandas`, `numpy`: Manipulasi data tabular.
+    - `scikit-learn`: Preprocessing pipeline.
+2.  **Machine Learning**:
+    - `xgboost`: Model klasifikasi utama (Gradient Boosting).
+    - `imbalanced-learn` (SMOTE): Penanganan data tidak seimbang saat training.
+    - `shap`: *Explainable AI* untuk interpretasi model (Faktor Risiko).
+3.  **Visualization**:
+    - `plotly`: Grafik interaktif (Gauge, Radar, Trends).
+    - `streamlit-option-menu`: Navigasi sidebar modern.
+    - `Pillow`: Manipulasi gambar/icon.
+4.  **Backend & Data**:
+    - `sqlalchemy`: ORM untuk manajemen database.
+    - `joblib`: Serialisasi model ML.
 
 ## 2. Struktur Proyek
+Struktur direktori saat ini (Monolith Architecture):
 
 ```text
 siaga_heart_app/
-├── README.md
-├── requirements.txt
 ├── ml/
-│   ├── cardio_model.py
-│   └── best_xgb_pipeline.joblib   # <-- Anda tempatkan sendiri di sini
+│   ├── cardio_model.py          # Wrapper Class untuk Load Model XGBoost & SHAP
+│   └── best_xgb_pipeline.joblib # File Model ML (Binary)
 ├── streamlit_app/
-│   └── app.py
-└── appheart/
-    ├── __init__.py
-    └── api/
-        ├── __init__.py
-        └── predict.py
+│   └── app.py                   # MAIN APPLICATION (Frontend + Backend + Logic)
+├── appheart/
+│   ├── database.py              # Koneksi Database (SQLAlchemy)
+│   ├── models.py                # Skema Tabel Database (User, Patient, Checkup)
+│   ├── schemas.py               # Pydantic Schemas (Data Validation)
+│   └── crud.py                  # Create/Read/Update/Delete Operations
+├── assets/
+│   └── heart.png                # Icon Aplikasi
+├── requirements.txt             # Daftar Pustaka (Dependencies)
+├── task.md                      # Log Pengerjaan (Dev)
+├── walkthrough.md               # Dokumentasi Update (Dev)
+└── README.md                    # Dokumentasi Proyek (File Ini)
 ```
 
-## 3. Integrasi & Alur Kerja
+## 3. Panduan Pembaruan (Maintenance)
 
-### 3.1. Model ML (XGBoost)
+### A. Environment Setup (Lokal)
+1.  Clone Repository.
+2.  Buat Virtual Environment:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Mac/Linux
+    venv\Scripts\activate     # Windows
+    ```
+3.  Install Dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-- Anda melakukan training model di notebook / script `cardio.py` (di luar contoh ini).
-- Simpan pipeline (ColumnTransformer + SMOTE + XGBClassifier) ke file
-  `best_xgb_pipeline.joblib` menggunakan `joblib.dump(...)`.
-- Letakkan file tersebut di folder `ml/`.
-
-`ml/cardio_model.py`:
-- Memuat file `best_xgb_pipeline.joblib` saat pertama kali dipanggil.
-- Menyediakan fungsi:
-  - `predict_proba(data: dict) -> float`
-  - `predict_label(data: dict, threshold: float = 0.5) -> int`
-
-### 3.2. Streamlit sebagai Backend Klinis
-
-`streamlit_app/app.py`:
-
-- Menyediakan UI untuk tenaga kesehatan:
-  - Input usia, jenis kelamin, tinggi, berat, tekanan darah (sistolik/diastolik),
-    kolesterol, glukosa, merokok, alkohol, aktivitas fisik.
-  - Menghitung **BMI** dan **MAP** otomatis.
-  - Memanggil `CardioRiskModel` untuk mendapatkan probabilitas risiko penyakit jantung.
-  - Menampilkan hasil dalam bentuk:
-    - Persentase risiko.
-    - Kategori (Rendah / Sedang / Tinggi).
-    - Ringkasan interpretasi singkat.
-
-- Aplikasi ini dapat dijalankan dengan:
-
+### B. Menjalankan Aplikasi
 ```bash
-cd siaga_heart_app
-pip install -r requirements.txt
 streamlit run streamlit_app/app.py
 ```
 
-### 3.3. Integrasi dengan `appheart` (Opsional)
+### C. Deployment (Streamlit Cloud)
+1.  Pastikan file `requirements.txt` selalu ter-update jika menambah library baru.
+2.  Push perubahan ke GitHub:
+    ```bash
+    git add .
+    git commit -m "Update fitur"
+    git push
+    ```
+3.  Di Dashboard Streamlit Cloud, klik **Reboot App** untuk menarik perubahan terbaru.
 
-`appheart/api/predict.py`:
+## 4. Pengembangan Lanjutan (Next Phase)
+Untuk fase selanjutnya, pertimbangkan hal berikut:
+- **Database**: Migrasi dari SQLite ke PostgreSQL (Supabase/Neon) untuk data persisten di Cloud.
+- **Auth**: Implementasi JWT atau Auth0 jika user bertambah banyak.
+- **API**: Mengaktifkan kembali `fastapi` jika ingin memisahkan Backend dan Frontend (Microservices).
 
-- Menyediakan contoh **endpoint FastAPI** `/predict` yang:
-  - Menerima JSON dengan field yang sama seperti UI Streamlit.
-  - Menggunakan `CardioRiskModel` untuk prediksi.
-  - Mengembalikan probabilitas dan label risiko.
-
-Integrasi opsional:
-
-1. Jalankan FastAPI:
-
-```bash
-uvicorn appheart.api.predict:app --reload
-```
-
-2. Ubah `streamlit_app/app.py`:
-   - Alih-alih import langsung `CardioRiskModel`, Anda dapat mengirim HTTP request
-     ke `http://localhost:8000/predict` menggunakan `requests.post(...)`.
-
-Dengan arsitektur ini:
-
-- **Tenaga kesehatan** hanya berinteraksi dengan **Streamlit**.
-- Streamlit bisa:
-  - langsung memakai model (sederhana), atau
-  - berperan sebagai *client* ke API FastAPI (lebih fleksibel untuk multi-client).
-# SIAGA_DETEKSI-JANTUNG
