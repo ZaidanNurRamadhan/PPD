@@ -117,11 +117,14 @@ st.markdown("""
     .metric-label { font-size: 14px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
     
     /* Modern Tabs */
+    .stTabs {
+        margin-top: 2rem; /* Add spacing from top */
+    }
     .stTabs [data-baseweb="tab-list"] { 
         gap: 8px; border-bottom: none; margin-bottom: 24px;
     }
     .stTabs [data-baseweb="tab"] { 
-        height: 40px; border-radius: 8px; color: #64748b; font-weight: 600; border: none; padding: 0 20px;
+        height: 40px; border-radius: 8px; color: #64748b; font-weight: 600; border: none; padding: 0 24px;
         background-color: transparent;
     }
     .stTabs [aria-selected="true"] { 
@@ -133,14 +136,16 @@ st.markdown("""
     
     /* Buttons */
     .stButton > button { 
-        border-radius: 10px; font-weight: 600; border: none !important;
-        transition: all 0.2s;
+        border-radius: 8px; font-weight: 600; border: none !important;
+        transition: all 0.2s; padding: 0.5rem 1rem;
     }
+    /* Submit Button Specifics */
     div[data-testid="stFormSubmitButton"] > button {
         background: #2563eb;
         color: white;
-        width: 100%;
-        padding: 0.75rem 0;
+        width: auto; /* Revert full width */
+        min-width: 150px;
+        padding: 0.6rem 2rem; /* Better internal padding */
         border: none !important;
         box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
     }
