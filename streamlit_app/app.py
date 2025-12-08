@@ -418,54 +418,56 @@ elif menu == "Pasien":
                 alco = st.checkbox("Alkohol")
                 active = st.checkbox("Aktif Fisik")
                 
-                if st.form_submit_button("Analisis", type="primary"):
-                    if age < 5:
-                        st.error("Pasien terlalu muda.")
-                    else:
-                        with st.spinner("Menganalisis..."):
-                            bmi = w / ((h/100)**2)
-                            map_val = (2*dia_bp + sys_bp)/3
-                            chol_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
-                            gluc_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
+                submitted = st.form_submit_button("Analisis", type="primary")
+            
+            if submitted:
+                if age < 5:
+                    st.error("Pasien terlalu muda.")
+                else:
+                    with st.spinner("Menganalisis..."):
+                        bmi = w / ((h/100)**2)
+                        map_val = (2*dia_bp + sys_bp)/3
+                        chol_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
+                        gluc_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
+                        
+                        res = perform_analysis(p, age, bmi, map_val, chol_map, gluc_map, chol, gluc, smoke, alco, active)
+                        
+                        if res:
+                            st.toast("Analisis Selesai!", icon="✅")
+                            st.markdown("### 📊 Hasil Analisis Saat Ini")
                             
-                            res = perform_analysis(p, age, bmi, map_val, chol_map, gluc_map, chol, gluc, smoke, alco, active)
-                            
-                            if res:
-                                st.toast("Analisis Selesai!", icon="✅")
-                                st.markdown("### 📊 Hasil Analisis Saat Ini")
+                            # Visual Results
+                            r1, r2 = st.columns(2)
+                            with r1:
+                                # Gauge-like display using metric and progress
+                                risk_color = "green" if res['risk_category'] == "Rendah" else "orange" if res['risk_category'] == "Sedang" else "red"
+                                st.metric("Probabilitas Risiko", f"{res['probability']:.1%}", res['risk_category'])
+                                st.progress(res['probability'])
+                                st.caption(f"Kategori: **{res['risk_category']}**")
                                 
-                                # Visual Results
-                                r1, r2 = st.columns(2)
-                                with r1:
-                                    # Gauge-like display using metric and progress
-                                    risk_color = "green" if res['risk_category'] == "Rendah" else "orange" if res['risk_category'] == "Sedang" else "red"
-                                    st.metric("Probabilitas Risiko", f"{res['probability']:.1%}", res['risk_category'])
-                                    st.progress(res['probability'])
-                                    st.caption(f"Kategori: **{res['risk_category']}**")
+                            with r2:
+                                # Recommendations
+                                st.markdown("#### Rekomendasi Medis")
+                                st.info(res['recommendations'])
+                            
+                            # SHAP if available
+                            if res.get('shap_values'):
+                                try:
+                                    shap_data = json.loads(res['shap_values'])
+                                    if shap_data:
+                                        st.markdown("#### Faktor Kontribusi Utama")
+                                        # Sort by absolute impact
+                                        sorted_shap = sorted(shap_data.items(), key=lambda x: abs(x[1]), reverse=True)
+                                        # Take top 3
+                                        for k, v in sorted_shap:
+                                            kn = k.replace("age_years", "Usia").replace("bmi", "BMI").replace("map", "Tekanan Darah")
+                                            impact = "Meningkatkan Risiko ⬆️" if v > 0 else "Menurunkan Risiko ⬇️"
+                                            color = "red" if v > 0 else "green"
+                                            st.markdown(f"- **{kn}**: :{color}[{impact}]")
+                                except:
+                                    pass
                                     
-                                with r2:
-                                    # Recommendations
-                                    st.markdown("#### Rekomendasi Medis")
-                                    st.info(res['recommendations'])
-                                
-                                # SHAP if available
-                                if res.get('shap_values'):
-                                    try:
-                                        shap_data = json.loads(res['shap_values'])
-                                        if shap_data:
-                                            st.markdown("#### Faktor Kontribusi Utama")
-                                            # Sort by absolute impact
-                                            sorted_shap = sorted(shap_data.items(), key=lambda x: abs(x[1]), reverse=True)
-                                            # Take top 3
-                                            for k, v in sorted_shap:
-                                                kn = k.replace("age_years", "Usia").replace("bmi", "BMI").replace("map", "Tekanan Darah")
-                                                impact = "Meningkatkan Risiko ⬆️" if v > 0 else "Menurunkan Risiko ⬇️"
-                                                color = "red" if v > 0 else "green"
-                                                st.markdown(f"- **{kn}**: :{color}[{impact}]")
-                                    except:
-                                        pass
-                                        
-                                st.button("🔄 Reset / Analisis Ulang", on_click=lambda: st.rerun())
+                            st.button("🔄 Reset / Analisis Ulang", on_click=lambda: st.rerun())
 
         with tab3:
             if not df_hist.empty:
