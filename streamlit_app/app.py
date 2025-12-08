@@ -519,16 +519,35 @@ elif menu == "Pasien":
                             st.toast("Analisis Selesai!", icon="✅")
                             st.markdown("### 📊 Hasil Analisis")
                             
-                            # Visual Results
-                            r1, r2 = st.columns([1, 1])
+                            # Row 1: Main Visuals (Gauge & Radar)
+                            r1, r2 = st.columns(2)
                             with r1:
-                                # GAUGE CHART (Restored)
+                                # 1. GAUGE CHART (Risk Probability)
                                 prob_val = res['probability'] * 100
                                 st.plotly_chart(create_gauge_chart(prob_val, "Probabilitas Risiko"), use_container_width=True)
+                                st.caption(f"Status: **{res['risk_category']}**")
                                 
                             with r2:
-                                # SHAP / RADAR
-                                if res.get('shap_values'):
+                                # 2. RADAR CHART (Risk Profile)
+                                # Reconstruct input data for visualization
+                                radar_input = {
+                                    "bmi": bmi,
+                                    "map": map_val,
+                                    "cholesterol": chol_map[chol], # 1, 2, 3
+                                    "gluc": gluc_map[gluc],       # 1, 2, 3
+                                    "smoke": int(smoke),
+                                    "alco": int(alco),
+                                    "active": int(active)
+                                }
+                                st.plotly_chart(create_radar_chart(radar_input), use_container_width=True)
+
+                            # Row 2: Recommendations & Explanation
+                            st.markdown("#### Rekomendasi Medis")
+                            st.info(res['recommendations'])
+                            
+                            # Row 3: Detail SHAP (Expandable)
+                            if res.get('shap_values'):
+                                with st.expander("Lihat Detail Faktor Penentu (AI Explanation)"):
                                     try:
                                         shap_data = json.loads(res['shap_values'])
                                         if shap_data:
@@ -537,19 +556,13 @@ elif menu == "Pasien":
                                             # Convert to DF for chart
                                             shap_df = pd.DataFrame(sorted_shap, columns=['Faktor', 'Impact'])
                                             
-                                            # Nice Bar Chart for SHAP (Like before)
                                             fig_shap = px.bar(shap_df, x='Impact', y='Faktor', orientation='h',
-                                                            title="Faktor Penentu (SHAP)",
+                                                            title="Kontribusi Faktor Risiko (SHAP)",
                                                             color='Impact', color_continuous_scale=['#2ecc71', '#e74c3c'])
-                                            fig_shap.update_layout(height=280, margin=dict(l=0,r=0,t=30,b=0), showlegend=False)
+                                            fig_shap.update_layout(height=300, margin=dict(l=0,r=0,t=30,b=0), showlegend=False)
                                             st.plotly_chart(fig_shap, use_container_width=True)
                                     except:
-                                        # Fallback to Radar if SHAP fails or empty
                                         pass
-                            
-                            # Recommendations
-                            st.markdown("#### Rekomendasi Medis")
-                            st.info(res['recommendations'])
                                 
                             st.button("🔄 Reset / Analisis Ulang", on_click=lambda: st.rerun())
 
