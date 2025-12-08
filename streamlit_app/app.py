@@ -18,6 +18,7 @@ sys.path.append(parent_dir)
 # --- DIRECT IMPORTS (No API) ---
 from appheart.database import SessionLocal, engine
 from appheart import crud, models, schemas
+from sqlalchemy import or_  # Added for direct search
 from ml.cardio_model import CardioRiskModel
 
 # Initialize DB
@@ -387,8 +388,13 @@ with st.sidebar:
         db = SessionLocal()
         if search:
             with st.spinner("Mencari..."):
-                # Use new search function (Supports Name OR MRN)
-                patients = crud.search_patients(db, q=search)
+                # Direct search to bypass module caching issues on Cloud
+                patients = db.query(models.Patient).filter(
+                    or_(
+                        models.Patient.full_name.contains(search),
+                        models.Patient.medical_record_number.contains(search)
+                    )
+                ).limit(20).all()
                 
             if patients:
                 st.caption(f"Ditemukan {len(patients)} pasien:")
