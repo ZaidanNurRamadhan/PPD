@@ -2,6 +2,16 @@
 base = "light"
 primaryColor = "#e74c3c"
 backgroundColor = "#f8f9fa"
-secondaryBackgroundColor = "#ffffff"
+secondaryBackgroundColor = #ffffff"
 textColor = "#2c3e50"
 font = "sans serif"
+widgetBackgroundColor = "#ffffff"
+widgetBorderColor = "#e2e8f0"
+skeletonBackgroundColor = "#f1f5f9"
+
+[theme.sidebar]
+backgroundColor = "#ffffff"
+textColor = "#2c3e50"
+widgetBackgroundColor = "#ffffff"
+widgetBorderColor = "#e2e8f0"
+skeletonBackgroundColor = "#f1f5f9"

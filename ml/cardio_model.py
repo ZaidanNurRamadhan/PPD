@@ -23,14 +23,53 @@ class CardioRiskModel:
             cls._instance._load_model()
         return cls._instance
 
+    def _ensure_loaded(self) -> None:
+        """Reload model if it failed to initialize (Streamlit hot-reload safety)."""
+        if not getattr(self, "pipeline", None):
+            self._load_model()
+
     def _load_model(self) -> None:
         if not MODEL_PATH.exists():
             raise FileNotFoundError(
                 f"Model file tidak ditemukan di {MODEL_PATH}. "
                 "Pastikan Anda sudah meletakkan best_xgb_pipeline.joblib di folder ml/."
             )
+
+        # --- Compatibility shim for scikit-learn 1.8+ ---
+        # shap<0.51 still imports the private `_is_pandas_df` helper that was removed
+        # in newer scikit-learn releases. We add a lightweight replacement before
+        # importing shap so the import does not crash.
+        try:
+            from sklearn.utils import validation as sk_validation
+            if not hasattr(sk_validation, "_is_pandas_df"):
+                import pandas as pd
+
+                def _is_pandas_df(x):
+                    return isinstance(x, pd.DataFrame)
+
+                sk_validation._is_pandas_df = _is_pandas_df
+        except Exception as e:
+            print(f"Warning: sklearn/shap compatibility patch failed: {e}")
+
+        # AdaBoostClassifier in scikit-learn 1.8 no longer accepts the deprecated
+        # `algorithm` argument that older imbalanced-learn versions still pass
+        # during import. We shim the signature to keep their imports working.
+        try:
+            from sklearn.ensemble import AdaBoostClassifier
+            import inspect
+
+            if "algorithm" not in inspect.signature(AdaBoostClassifier.__init__).parameters:
+                _orig_init = AdaBoostClassifier.__init__
+
+                def _patched_init(self, *args, algorithm=None, **kwargs):
+                    return _orig_init(self, *args, **kwargs)
+
+                AdaBoostClassifier.__init__ = _patched_init
+        except Exception as e:
+            print(f"Warning: AdaBoost compatibility patch failed: {e}")
+
         self.pipeline = joblib.load(MODEL_PATH)
-        
+
         # Initialize SHAP Explainer
         # Assuming the pipeline has a step named 'classifier' or is just the model
         # If it's a pipeline, we need to handle the preprocessor separately if it exists
@@ -62,6 +101,7 @@ class CardioRiskModel:
         return np.array(ordered, dtype=float).reshape(1, -1)
 
     def predict_proba(self, data: Dict) -> float:
+        self._ensure_loaded()
         X = self._to_feature_array(data)
         proba = self.pipeline.predict_proba(X)[0, 1]
         return float(proba)
@@ -70,6 +110,7 @@ class CardioRiskModel:
         return int(self.predict_proba(data) >= threshold)
 
     def get_shap_values(self, data: Dict) -> Dict[str, float]:
+        self._ensure_loaded()
         if not self.explainer:
             return {}
             
