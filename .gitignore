@@ -31,6 +31,9 @@ env/
 *.db
 *.sqlite3
 
+# Data artifacts (do not commit raw datasets)
+cardio_train.csv
+
 # Streamlit
 .streamlit/secrets.toml
 

@@ -242,15 +242,23 @@ def create_radar_chart(input_data):
     )
     return fig
 
-def perform_analysis(p, age_years, bmi, map_val, chol_map, gluc_map, chol, gluc, smoke, alco, active):
+def perform_analysis(p, age_years, height_cm, weight_kg, sys_bp, dia_bp, chol_map, gluc_map, chol, gluc, smoke, alco, active):
     try:
+        # Derived clinical metrics
+        bmi = weight_kg / ((height_cm / 100) ** 2)
+        map_val = (2 * dia_bp + sys_bp) / 3
+
         # Load Model
         model = CardioRiskModel()
         
         # Prepare Data
-        input_data = {
+        model_payload = {
             "age_years": age_years,
             "gender": 1 if p['gender'] == 'F' else 2,
+            "height": height_cm,
+            "weight": weight_kg,
+            "ap_hi": sys_bp,
+            "ap_lo": dia_bp,
             "bmi": bmi,
             "map": map_val,
             "cholesterol": chol_map[chol],
@@ -261,9 +269,9 @@ def perform_analysis(p, age_years, bmi, map_val, chol_map, gluc_map, chol, gluc,
         }
         
         # Predict
-        proba = model.predict_proba(input_data)
-        label = model.predict_label(input_data, threshold=0.5)
-        shap_dict = model.get_shap_values(input_data)
+        proba = model.predict_proba(model_payload)
+        label = model.predict_label(model_payload, threshold=0.5)
+        shap_dict = model.get_shap_values(model_payload)
         shap_json = json.dumps(shap_dict)
         
         # Categories & Recommendations
@@ -294,9 +302,20 @@ def perform_analysis(p, age_years, bmi, map_val, chol_map, gluc_map, chol, gluc,
         # Save to DB
         db = SessionLocal()
         try:
+            checkup_payload = {
+                "age_years": age_years,
+                "gender": 1 if p['gender'] == 'F' else 2,
+                "bmi": bmi,
+                "map": map_val,
+                "cholesterol": chol_map[chol],
+                "gluc": gluc_map[gluc],
+                "smoke": int(smoke),
+                "alco": int(alco),
+                "active": int(active)
+            }
             checkup_data = schemas.CheckupCreate(
                 checked_by_user_id=st.session_state.user_id,
-                **input_data
+                **checkup_payload
             )
             # Remove extra keys for schema if needed, but schema creation ignores extras usually or validates.
             # We constructed input_data to match model features, which might differ slightly from schema.
@@ -616,7 +635,21 @@ elif menu == "Pasien":
                         chol_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
                         gluc_map = {"Normal": 1, "Sedang": 2, "Tinggi": 3}
                         
-                        res = perform_analysis(p, age, bmi, map_val, chol_map, gluc_map, chol, gluc, smoke, alco, active)
+                        res = perform_analysis(
+                            p,
+                            age,
+                            h,
+                            w,
+                            sys_bp,
+                            dia_bp,
+                            chol_map,
+                            gluc_map,
+                            chol,
+                            gluc,
+                            smoke,
+                            alco,
+                            active
+                        )
                         
                         if res:
                             st.toast("Analisis Selesai!", icon="✅")
